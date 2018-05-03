@@ -26,3 +26,5 @@ occ_transf <- SpatialPointsDataFrame(
 
 #View mapped data
 mapview(occ_transf)
+
+#kwjbvouwvb
