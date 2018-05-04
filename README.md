@@ -1,6 +1,18 @@
 # Long-billed curlew dispersal patterns
 
-## Questions / Objectives
+### Questions / Objectives
+
+* 1 Are birds philopatric? -> locations ~same across years?*
+  Analysis: Group points into summer/migration/winter/rest(?)
+            Find MCPs (minimum convex polygons) around nesting/summer locations
+
+### 2 Different phenologies between travel distances? (net displacement vs time of migration/travel speed/travel time/#of rests)
+
+3 Commonalities of habitat type/ecogeographic classification of coast/city/other within birds between summer/winter places?
+4 GPS data representative of all occurences? -> GPS data area as % of GBIF data area
+
+
+
 
 ### Occurrence data
 (1. Assess the sampling effort across the years (plot counts ~ years))
@@ -17,12 +29,4 @@
 3. a. for each dataset, on a smaller region, assess movements and path characteristics across a gradient of habitat quality, degradation and human use.
 3. b. assess connectivity and movement paths with something like circuitscape ? over the years if possible?
 
-## Final Questions
-Are birds philopatric? -> locations ~same across years?
-Commonalities of habitat type/ecogeographic classification of coast/city/other within birds between summer/winter places?
-Different phenologies between travel distances (net displacement vs time of migration/travel speed/travel time/#of rests)
-GPS data representative of all occurences? -> GPS data area as % of GBIF data area
 
-## Analysis necessary
-Find MCPs (minimum convex polygons) around nesting/summer locations
-Group points into summer/migration/winter/rest(?)
