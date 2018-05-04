@@ -2,7 +2,7 @@
 
 ### Questions / Objectives
 
-### 1 Are birds philopatric? -> locations ~same across years?
+* 1 Are birds philopatric? -> locations ~same across years?*
   Analysis: Group points into summer/migration/winter/rest(?)
             Find MCPs (minimum convex polygons) around nesting/summer locations
 
