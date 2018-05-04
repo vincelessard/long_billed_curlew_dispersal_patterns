@@ -2,11 +2,11 @@
 
 ### Questions / Objectives
 
-####1 Are birds philopatric? -> locations ~same across years?
+###1 Are birds philopatric? -> locations ~same across years?
   Analysis: Group points into summer/migration/winter/rest(?)
             Find MCPs (minimum convex polygons) around nesting/summer locations
 
-####2 Different phenologies between travel distances? (net displacement vs time of migration/travel speed/travel time/#of rests)
+###2 Different phenologies between travel distances? (net displacement vs time of migration/travel speed/travel time/#of rests)
 
 3 Commonalities of habitat type/ecogeographic classification of coast/city/other within birds between summer/winter places?
 4 GPS data representative of all occurences? -> GPS data area as % of GBIF data area
