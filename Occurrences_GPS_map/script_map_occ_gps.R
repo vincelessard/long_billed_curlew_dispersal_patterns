@@ -6,20 +6,14 @@ require(scrubr)
 require(plyr)
 require(dplyr)
 require(tidyr)
-require(ggplot2)
-require(sp)
-require(rgdal)
-require(alphahull)
-require(igraph)
-require(ggthemes)
-require(RgoogleMaps)
-require(rworldmap)
 require(rworldxtra)
 require(leaflet)
 windowsFonts(Times=windowsFont("TT Times New Roman"))
-pd <- position_dodge(.1)
-
 setwd("C:/Users/Morgane/Documents/SBL workshop/Project/map")
+
+source("create_ahull.R")
+source("ready_to_map.R")
+source("make_hull_poly.R")
 
 # 1. Download the occurrences data ####
 # download the data from GBIF and BISON databases
@@ -98,62 +92,10 @@ occdata <- read.table("Occurrences_data_f.csv",sep=";", header=T)
 gpsdata <- read.table("GPS_data_map.csv",sep=";", header=T)
 
 # 4.2 Create the alpha shape around the points ####
-create_ahull <- function(data, alpha){
-  ex_ashape = ashape(data, alpha = alpha)# Computation And Order Alpha Shape
-  ex_mat = ex_ashape$edges[, c("ind1", "ind2")]# Take the coordinates of points on the edges of the alpha shape
-  class(ex_mat) = "character"# Convert 'numeric' matrix to 'character' matrix, to avoid wrong node orders 
-  ex_graph = graph.edgelist(ex_mat, directed = F)# Make the graph of points
-  # plot(ex_graph)# Verify its a cyclic graph
-  cut_graph = ex_graph - E(ex_graph)[1]  # Cut the first edge
-  ends = names(which(degree(cut_graph) == 1))   # Get two nodes with degree = 1
-  path = get.shortest.paths(cut_graph, ends[1], ends[2])$vpath[[1]]# Compute a path
-  path_nodes = as.numeric(V(ex_graph)[path]$name)# Get node names (= row numbers in original data.frame)
-  return(path_nodes)
-}
 occ_ahull <- create_ahull(occdata, 3)
 gps_ahull <- create_ahull(gpsdata, 3)
-write.table(occ_ahull, paste("Occurrences_alphahull",".csv",sep=""), sep=";", na="", row.names=F)
-write.table(gps_ahull, paste("GPS_alphahull_map",".csv",sep=""), sep=";", na="", row.names=F)
 
 # 4.3 Map the points and the alpha shape ####
-occ_ahull <- read.table("Occurrences_alphahull.csv",sep=";", header=T)
-gps_ahull <- read.table("GPS_alphahull_map.csv",sep=";", header=T)
-
-extent <- occdata %>% select(x = longitude, y = latitude) %>% raster::extent()
-
-ready_to_map_points <- function(data, color, caption){
-  base_layer <- ggplot(data = data, aes(x = longitude, y = latitude)) +
-    geom_point(size=4, color = color, shape = ".")+
-    coord_equal()+
-    theme_map()
-  mapdata <- base_layer+
-    geom_path(data = ggplot2::map_data("world"), aes(x = long, y =lat, group=group))+
-    scale_x_continuous(limits = c(extent@xmin, extent@xmax))+
-    scale_y_continuous(limits = c(extent@ymin, extent@ymax))+
-    coord_fixed(1.3)+  
-    labs(x=NULL, y=NULL, 
-         title="Occurrences of long-billed curlew",
-         subtitle=NULL,
-         caption= caption)
-  return(mapdata)
-}
-
-ready_to_map_hull <- function(data, hulldata, color){
-  ahull.poly <- Polygon(data[hulldata, c("longitude", "latitude")]) %>% 
-    list %>% Polygons(ID=1) %>%
-    list %>% SpatialPolygons()
-  proj4string(ahull.poly) <- CRS("+init=epsg:4326")
-  world_map <- getMap(resolution = "high") %>% subset(continent = "North America")
-  world_map <- sp::spTransform(world_map, proj4string(ahull.poly))
-  onland.poly <- raster::intersect(world_map, ahull.poly)
-  lps <- getSpPPolygonsLabptSlots(onland.poly)
-  IDOneBin <- cut(lps[,1], range(lps[,1]), include.lowest = TRUE)
-  onland <- maptools::unionSpatialPolygons(onland.poly, IDOneBin)
-  onland_layer <- geom_polygon(data = fortify(onland), aes(x = long, y = lat, group = piece), 
-                               fill=color, alpha=0.5,
-                               size = 1.25)
-  return(onland_layer)
-}
 caption_occ <- "https://doi.org/10.15468/dl.nmoa7l \n https://bison.usgs.gov, 2018-05-04"
 caption_gps <- "MoveBank"
 
@@ -170,6 +112,7 @@ base_layer <- ggplot() +
              size=4, color = "forestgreen", shape = ".")+
   coord_equal()+
   theme_map()
+extent <- occdata %>% select(x = longitude, y = latitude) %>% raster::extent()
 mapdata <- base_layer+
   geom_path(data = ggplot2::map_data("world"), aes(x = long, y =lat, group=group))+
   scale_x_continuous(limits = c(extent@xmin, extent@xmax))+
@@ -184,7 +127,10 @@ final_occ_graph <- mapdata + ready_to_map_hull(occdata, occ_ahull, "darkorange")
   ready_to_map_hull(gpsdata, gps_ahull, "darkolivegreen2")
 
 # 5. Calculate the area overlap #####
-gps_inters_occ <- raster::intersect(onland.gps, onland.occ)
+onland.gps <- make_hull_poly(gpsdata, gps_ahull)
+onland.occ <- make_hull_poly(occdata, occ_ahull)
+
+gps_inters_occ <- raster::intersect(onland.occ,onland.gps)
 layer_inters <- geom_polygon(data = fortify(gps_inters_occ), aes(x = long, y = lat, group = piece), 
                                  fill="deepskyblue3", alpha=0.5,
                                  size = 1.25)
@@ -199,13 +145,23 @@ interm_graph <- mapdata + ready_to_map_hull(occdata, occ_ahull, "darkorange") +
   ready_to_map_hull(gpsdata, gps_ahull, "darkolivegreen2")
 final_graph <- interm_graph+  annotate("text",x=-120,y=15,label="41.87% overlap")
 
-# mean center
+# 6. Restrict overlap to dense occurrences areas ####
+
 mc <- apply(occdata, 2, mean)
 as.numeric(mc[1])
 # standard distance
 sd <- sqrt(sum((occdata[,1] - mc[1])^2 + (occdata[,2] - mc[2])^2) / nrow(occdata))
 final_graph + annotate("point",x=as.numeric(mc[1]), y=as.numeric(mc[2]), col="blue", size=10)
 
+
+library("dbscan")
+# density-based clustering
+x <- as.matrix(occdata)
+db <- dbscan(x, eps = 5, minPts = 500)
+db
+pairs(x, col = db$cluster + 1L)
+lof <- lof(x, k = 500)
+pairs(x, cex = lof)
 
 city <- readRDS('city.rds')
 CityArea <- area(city)
